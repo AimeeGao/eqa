@@ -32,9 +32,9 @@ class ReportTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_reports_page_lists_all_six_reports(): void
+    public function test_reports_page_lists_all_five_reports(): void
     {
-        $this->report('')->assertJsonCount(6, 'props.reports')->assertJsonPath('props.report', null);
+        $this->report('')->assertJsonCount(5, 'props.reports')->assertJsonPath('props.report', null);
     }
 
     public function test_unknown_report_is_not_found(): void
@@ -135,28 +135,6 @@ class ReportTest extends TestCase
             ->assertJsonPath('props.report.rows.0.name', 'Alpha College')
             ->assertJsonPath('props.report.rows.0.status', 'Under Review')
             ->assertJsonPath('props.report.rows.0.application_date', '2026-10-01');
-    }
-
-    public function test_designations_on_a_date_are_counted_by_qa(): void
-    {
-        $this->institution('inst-a', 'Public One', ['qa_met_through' => 'Public Institution Legislation', 'designation_start' => '2024-01-01', 'designation_expiry' => '2027-01-01']);
-        $this->institution('inst-b', 'Public Two', ['qa_met_through' => 'Public Institution Legislation', 'designation_start' => '2025-06-01', 'designation_expiry' => '2026-06-01']);
-        $this->institution('inst-c', 'Removed', ['eqa_status' => 'De-Designated', 'qa_met_through' => 'Ministry Review Process', 'designation_start' => '2024-01-01', 'designation_expiry' => '2027-01-01', 'de_designated_date' => '2025-09-01']);
-        $this->institution('inst-d', 'Not Yet', ['designation_start' => '2026-01-01', 'designation_expiry' => '2027-01-01']);
-        $this->institution('inst-e', 'Never Designated', ['eqa_status' => 'Pending', 'designation_start' => '2024-01-01']);
-
-        $this->report('designations-on-date', ['date' => '2025-08-01'])
-            ->assertJsonPath('props.filters.date', '2025-08-01')
-            ->assertJsonCount(3, 'props.report.rows')
-            ->assertJsonPath('props.report.summary', [
-                ['label' => 'Ministry Review Process', 'count' => 1],
-                ['label' => 'Public Institution Legislation', 'count' => 2],
-            ])
-            ->assertJsonPath('props.report.rows.0.designation_end', '2025-09-01');
-
-        $this->report('designations-on-date')
-            ->assertJsonPath('props.filters.date', '2026-11-02')
-            ->assertJsonPath('props.report.summary', [['label' => 'Not specified', 'count' => 1], ['label' => 'Public Institution Legislation', 'count' => 1]]);
     }
 
     public function test_csv_export_neutralises_formulas(): void

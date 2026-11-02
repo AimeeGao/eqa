@@ -45,15 +45,7 @@ class ReportController extends Controller
             'title' => 'Active Applications',
             'description' => 'Institutions with an application that is still in progress.',
         ],
-        'designations-on-date' => [
-            'title' => 'Designations at a Point in Time',
-            'description' => 'How many institutions were designated under each QA Met Through on a chosen date.',
-            'filters' => ['date'],
-            'note' => 'Based on each institution\'s current designation start and end dates and its current QA Met Through.',
-        ],
     ];
-
-    private const NO_QA = 'Not specified';
 
     public function index(): Response
     {
@@ -88,7 +80,7 @@ class ReportController extends Controller
                 fputcsv($out, array_map(fn (string $key): string => $this->csvCell($row[$key] ?? null), $keys), escape: '');
             }
             fclose($out);
-        }, $report.'-'.($filters['date'] ?? $this->today()).'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }, $report.'-'.$this->today().'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /** @return list<array{key: string, title: string, description: string}> */
@@ -106,15 +98,11 @@ class ReportController extends Controller
         $data = $request->validate([
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', Rule::when($request->filled('from'), 'after_or_equal:from')],
-            'date' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
         $filters = [];
         foreach (self::REPORTS[$report]['filters'] ?? [] as $name) {
             $filters[$name] = $data[$name] ?? null;
-        }
-        if (array_key_exists('date', $filters)) {
-            $filters['date'] ??= $this->today();
         }
 
         return $filters;
@@ -122,7 +110,7 @@ class ReportController extends Controller
 
     /**
      * @param  array<string, string|null>  $filters
-     * @return array{columns: array<string, string>, rows: list<array<string, mixed>>, summary?: list<array{label: string, count: int}>}
+     * @return array{columns: array<string, string>, rows: list<array<string, mixed>>}
      */
     private function build(string $report, array $filters): array
     {
@@ -132,7 +120,6 @@ class ReportController extends Controller
             'de-designated' => $this->deDesignated($filters['from'], $filters['to']),
             'primary-contacts' => $this->contactsReport(),
             'active-applications' => $this->activeApplications(),
-            'designations-on-date' => $this->designationsOnDate((string) $filters['date']),
         };
     }
 
@@ -274,46 +261,6 @@ class ReportController extends Controller
                 'status' => $a->status,
                 'application_date' => $a->application_date,
             ])->all(),
-        ];
-    }
-
-    /**
-     * Institutions whose designation (start through expiry, cut short by any
-     * de-designation) covered the given date, counted by QA Met Through.
-     */
-    private function designationsOnDate(string $date): array
-    {
-        $institutions = DB::table('institutions')
-            ->where(fn (Builder $q) => $q->whereIn('eqa_status', ['Designated', 'De-Designated'])->orWhereNotNull('de_designated_date'))
-            ->where('designation_start', '<=', $date)
-            ->where(fn (Builder $q) => $q->whereNull('designation_expiry')->orWhere('designation_expiry', '>=', $date))
-            ->where(fn (Builder $q) => $q->whereNull('de_designated_date')->orWhere('de_designated_date', '>', $date))
-            ->orderBy('qa_met_through')
-            ->orderBy('name')
-            ->get(['crm_id', 'name', 'qa_met_through', 'designation_start', 'designation_expiry', 'de_designated_date']);
-
-        $summary = $institutions
-            ->countBy(fn (object $i): string => trim((string) $i->qa_met_through) ?: self::NO_QA)
-            ->sortKeys()
-            ->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])
-            ->values()
-            ->all();
-
-        return [
-            'columns' => [
-                'name' => 'Institution Name',
-                'qa_met_through' => 'QA Met Through',
-                'designation_start' => 'Designation Start Date',
-                'designation_end' => 'Designation End Date',
-            ],
-            'rows' => $institutions->map(fn (object $i): array => [
-                'institution_crm_id' => $i->crm_id,
-                'name' => $i->name,
-                'qa_met_through' => $i->qa_met_through,
-                'designation_start' => $i->designation_start,
-                'designation_end' => $i->de_designated_date ?? $i->designation_expiry,
-            ])->all(),
-            'summary' => $summary,
         ];
     }
 
