@@ -130,6 +130,9 @@ class DesignationService
                 if (empty($updates['eqa_standing'])) {
                     $updates['eqa_standing'] = 'In Good Standing';
                 }
+                $updates['de_designated_date'] = null;
+            } elseif ($institution->eqa_status === 'Designated') {
+                $updates['de_designated_date'] = self::today();
             }
 
             DB::table('institutions')->where('crm_id', $instCrmId)->update($updates);
@@ -162,6 +165,7 @@ class DesignationService
             'eqa_status' => 'Designated',
             'designation_start' => $institution->designation_start ?: $approvedDate,
             'designation_expiry' => $designationExpiry ?: $institution->designation_expiry,
+            'de_designated_date' => null,
         ];
         if (empty($institution->eqa_standing)) {
             $updates['eqa_standing'] = 'In Good Standing';
@@ -185,7 +189,7 @@ class DesignationService
 
         if ($institution->eqa_status === 'Designated'
             && ! self::ptiruPermitsDesignation($institution->qa_met_through, $institution->ptib_standing)) {
-            DB::table('institutions')->where('crm_id', $instCrmId)->update(['eqa_status' => 'De-Designated']);
+            DB::table('institutions')->where('crm_id', $instCrmId)->update(['eqa_status' => 'De-Designated', 'de_designated_date' => self::today()]);
         }
     }
 
@@ -226,6 +230,11 @@ class DesignationService
             'eqa_good_standing' => self::standingIsGood($institution->eqa_standing ?? null),
             'ptib_good_standing' => self::standingIsGood($institution->ptib_standing ?? null),
         ];
+    }
+
+    private static function today(): string
+    {
+        return Carbon::now('America/Vancouver')->toDateString();
     }
 
     private function cascadeStandingToApplications(string $instCrmId, ?string $eqaStanding, ?string $ptibStanding): void
