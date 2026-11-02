@@ -9,19 +9,17 @@ const props = defineProps({
     errors: { type: Object, default: () => ({}) },
 })
 
-const filterLabels = { from: 'From', to: 'To', date: 'Date' }
+const filterLabels = { from: 'From', to: 'To' }
 const inputClass = 'mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none'
 
-const form = reactive({ from: '', to: '', date: '' })
+const form = reactive({ from: '', to: '' })
 watch(() => props.filters, (f) => {
     form.from = f?.from ?? ''
     form.to = f?.to ?? ''
-    form.date = f?.date ?? ''
 }, { immediate: true })
 
 const columns = computed(() => Object.entries(props.report?.columns ?? {}))
 const rows = computed(() => props.report?.rows ?? [])
-const total = computed(() => (props.report?.summary ?? []).reduce((sum, s) => sum + s.count, 0))
 
 function params(source) {
     const p = {}
@@ -91,33 +89,12 @@ function link(key, row) {
         <form v-if="report.filters.length" class="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm" @submit.prevent="run">
             <label v-for="name in report.filters" :key="name" class="flex flex-col text-sm text-slate-600">
                 {{ filterLabels[name] }}
-                <input v-model="form[name]" type="date" :required="name === 'date'" :class="inputClass" />
+                <input v-model="form[name]" type="date" :class="inputClass" />
                 <span v-if="errors[name]" class="mt-1 text-xs text-red-600">{{ errors[name] }}</span>
             </label>
             <button type="submit" class="rounded-md bg-slate-800 px-4 py-1.5 text-sm font-semibold text-white hover:bg-slate-700">Run report</button>
             <p v-if="report.note" class="basis-full text-xs text-slate-500">{{ report.note }}</p>
         </form>
-
-        <div v-if="report.summary" class="mt-4 rounded-lg border border-slate-200 bg-white shadow-sm">
-            <h2 class="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
-                {{ total }} institution{{ total === 1 ? '' : 's' }} designated on {{ filters.date }}
-            </h2>
-            <table class="min-w-full divide-y divide-slate-200 text-sm">
-                <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <tr>
-                        <th scope="col" class="px-4 py-2.5">QA Met Through</th>
-                        <th scope="col" class="px-4 py-2.5 text-right">Institutions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    <tr v-for="s in report.summary" :key="s.label">
-                        <td class="px-4 py-2 text-slate-700">{{ s.label }}</td>
-                        <td class="px-4 py-2 text-right font-medium text-slate-800">{{ s.count }}</td>
-                    </tr>
-                    <tr v-if="report.summary.length === 0"><td colspan="2" class="px-4 py-4 text-center text-slate-400">No institutions were designated on this date.</td></tr>
-                </tbody>
-            </table>
-        </div>
 
         <p class="mt-4 text-sm text-slate-500">{{ rows.length }} row{{ rows.length === 1 ? '' : 's' }}</p>
         <div class="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
