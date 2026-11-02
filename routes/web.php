@@ -13,6 +13,7 @@ use Modules\Admin\Http\Controllers\ApplicationWorkflowController;
 use Modules\Admin\Http\Controllers\EmailTemplateController;
 use Modules\Admin\Http\Controllers\InstitutionController;
 use Modules\Admin\Http\Controllers\InvoiceController;
+use Modules\Admin\Http\Controllers\ReportController;
 use Modules\Admin\Http\Controllers\StaffController;
 use Modules\Web\Http\Controllers\PaymentController;
 use Modules\Web\Http\Controllers\WebPortalController;
@@ -153,6 +154,11 @@ Route::get('/admin/invoices/{crmId}', [InvoiceController::class, 'show'])->name(
 Route::get('/admin/invoices/{crmId}/receipt', [InvoiceController::class, 'receipt'])->name('admin.invoice.receipt');
 Route::post('/admin/invoices/{crmId}/transactions/{orderNumber}/accept', [InvoiceController::class, 'acceptPayment'])->name('admin.invoice.payment.accept');
 Route::post('/admin/invoices/{crmId}/transactions/{orderNumber}/dismiss', [InvoiceController::class, 'dismissPayment'])->name('admin.invoice.payment.dismiss');
+
+// Ministry reports (on screen + CSV download).
+Route::get('/admin/reports', [ReportController::class, 'index'])->name('admin.reports');
+Route::get('/admin/reports/{report}', [ReportController::class, 'show'])->name('admin.report.show');
+Route::get('/admin/reports/{report}/csv', [ReportController::class, 'export'])->name('admin.report.export');
 
 // Ministry email templates (migrated CRM notification emails) + global master
 // switch for email sending (default OFF). Ministry Admins only.

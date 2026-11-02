@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Modules\Admin\Models\Application;
 use Modules\Admin\Services\ApplicationFeeService;
 use Modules\Admin\Services\ProcessNotifier;
 
@@ -48,18 +49,12 @@ class WebPortalController extends Controller
             ->get();
     }
 
-    /** Workflow stages that mean the institution already has an open application. */
-    private const ACTIVE_STAGES = [
-        'draft', 'pending_review', 'fees_payment', 'under_review', 'suitability_review', 'application_approval',
-        'not_approved', 'non_approval_reasons', 'admin_fee', 'appeal_payment', 'appeal_review',
-    ];
-
     private function hasActiveApplication(object $institution): bool
     {
         return DB::getSchemaBuilder()->hasTable('applications')
             && DB::table('applications')
                 ->where('institution_crm_id', $institution->crm_id)
-                ->whereIn('workflow_stage', self::ACTIVE_STAGES)
+                ->whereIn('workflow_stage', Application::ACTIVE_STAGES)
                 ->exists();
     }
 
